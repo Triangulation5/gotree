@@ -27,6 +27,15 @@ cd gotree
 # Running the application
 go run .\cmd\tree\main.go
 ```
+
+Building a reusable executable:
+
+```bash
+go build -o gtr.exe .\cmd\tree\main.go
+```
+
+Link this executable to a command in your .bashrc or Microsoft.Powershell_profile.ps1
+
 ## Flags
 
 | Flag | Description                   |
