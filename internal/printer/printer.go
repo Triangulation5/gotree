@@ -15,7 +15,12 @@ func Print(root *model.Node) {
 	fmt.Println(root.Name)
 	for i, child := range root.Children {
 		printNode(child, "", i == len(root.Children)-1)
+	}
 }
+
+func PrintSummary(root *model.Node) {
+	dirs, files := root.Count()
+	fmt.Printf("\n%d directories, %d files\n", dirs, files)
 }
 
 func printNode(n *model.Node, prefix string, isLast bool) {

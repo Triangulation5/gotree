@@ -15,8 +15,10 @@ import (
 )
 
 type Config struct {
-	ShowHidden bool
-	MaxDepth   int
+	ShowHidden      bool
+	MaxDepth        int
+	DirectoriesOnly bool
+	Sorted          bool
 }
 
 func BuildTree(root string, cfg Config) (*model.Node, error) {
@@ -24,9 +26,9 @@ func BuildTree(root string, cfg Config) (*model.Node, error) {
 }
 
 func walk(path string, depth int, cfg Config) (*model.Node, error) {
-    info, err := os.Lstat(path)
-    if err != nil {
-        return nil, err
+    info, error := os.Lstat(path)
+    if error != nil {
+        return nil, error
     }
 
     node := &model.Node{
@@ -43,14 +45,16 @@ func walk(path string, depth int, cfg Config) (*model.Node, error) {
         return node, nil
     }
 
-    entries, err := os.ReadDir(path)
-    if err != nil {
-        return nil, err
+    entries, error := os.ReadDir(path)
+    if error != nil {
+        return nil, error
     }
 
-    sort.Slice(entries, func(i, j int) bool {
-        return entries[i].Name() < entries[j].Name()
-    })
+    if cfg.Sorted {
+        sort.Slice(entries, func(i, j int) bool {
+            return entries[i].Name() < entries[j].Name()
+        })
+    }
 
     for _, e := range entries {
         name := e.Name()
@@ -59,11 +63,15 @@ func walk(path string, depth int, cfg Config) (*model.Node, error) {
             continue
         }
 
+        if cfg.DirectoriesOnly && !e.IsDir() {
+            continue
+        }
+
         childPath := filepath.Join(path, name)
 
-        child, err := walk(childPath, depth+1, cfg)
-        if err != nil {
-            return nil, err
+        child, error := walk(childPath, depth+1, cfg)
+        if error != nil {
+            return nil, error
         }
 
         node.Children = append(node.Children, child)

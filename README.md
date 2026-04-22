@@ -1,4 +1,4 @@
-# gotree
+# gotree (gtr)
 
 A simple Go implementation of the Unix `tree` command.
 It recursively prints a directory structure in a readable ASCII format.
