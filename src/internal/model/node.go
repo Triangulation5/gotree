@@ -2,10 +2,12 @@
 package model
 
 type Node struct {
-    Name     string
-    Path     string
-    IsDir    bool
-    Children []*Node
+    Name       string
+    Path       string
+    IsDir      bool
+    Children   []*Node
+    IsSummary  bool
+    SummaryMsg string
 }
 
 func (n *Node) Count() (dirs, files int) {
