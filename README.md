@@ -49,8 +49,8 @@ Link this executable to a command in your .bashrc or Microsoft.Powershell_profil
 
 ## Flags
 
-| Flag | Description                                                              |
-|------|--------------------------------------------------------------------------|
+| Flag                         | Description                                      |
+|------------------------------|--------------------------------------------------|
 | `-a`                         | Show hidden files (dotfiles)                     |
 | `-L`                         | Maximum depth (0 = unlimited)                    |
 | `-o`, `--order-by-extension` | Sort files by extension                          |
