@@ -6,3 +6,8 @@
 /bin/
 /dist/
 /build/
+.pytest_cache/
+pytest-cache-files-*/
+tests/python/.tmp/
+__pycache__/
+*.pyc

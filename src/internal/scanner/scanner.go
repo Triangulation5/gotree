@@ -1,7 +1,9 @@
+// Package scanner
 package scanner
 
 import (
 	"bufio"
+	"cmp"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,36 +14,58 @@ import (
 )
 
 type Config struct {
-	ShowHidden       bool
-	MaxDepth         int
-	DirectoriesOnly  bool
-	Sorted           bool
-	SummaryMode      bool
-	OrderByExtension bool
+	ShowHidden      bool
+	MaxDepth        int
+	DirectoriesOnly bool
+	SummaryMode     bool
+	SortBy          string
+	Reverse         bool
+	IncludePatterns []string
+	IgnorePatterns  []string
+}
+
+type walkContext struct {
+	rootAbs string
+	cfg     Config
+	ignores []string
 }
 
 func BuildTree(root string, cfg Config) (*model.Node, error) {
 	ignoreList := loadGitIgnore(root)
-	return walk(root, 0, cfg, ignoreList)
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return nil, err
+	}
+	ctx := walkContext{
+		rootAbs: absRoot,
+		cfg:     cfg,
+		ignores: ignoreList,
+	}
+	return walk(root, 0, ctx)
 }
 
-func walk(path string, depth int, cfg Config, ignores []string) (*model.Node, error) {
+func walk(path string, depth int, ctx walkContext) (*model.Node, error) {
 	info, err := os.Lstat(path)
 	if err != nil {
 		return nil, err
 	}
 
 	node := &model.Node{
-		Name:  info.Name(),
-		Path:  path,
-		IsDir: info.IsDir(),
+		Name:         info.Name(),
+		Path:         path,
+		IsDir:        info.IsDir(),
+		SizeBytes:    info.Size(),
+		ModifiedUnix: info.ModTime().Unix(),
+	}
+	if info.IsDir() {
+		node.SizeBytes = 0
 	}
 
 	if !info.IsDir() {
 		return node, nil
 	}
 
-	if cfg.MaxDepth > 0 && depth >= cfg.MaxDepth {
+	if ctx.cfg.MaxDepth > 0 && depth >= ctx.cfg.MaxDepth {
 		return node, nil
 	}
 
@@ -56,9 +80,10 @@ func walk(path string, depth int, cfg Config, ignores []string) (*model.Node, er
 
 	for _, e := range entries {
 		name := e.Name()
+		childPath := filepath.Join(path, name)
 
 		// .gitignore support - only filter in summary mode
-		if cfg.SummaryMode && isIgnored(name, ignores) {
+		if ctx.cfg.SummaryMode && isIgnored(name, ctx.ignores) {
 			if e.IsDir() {
 				ignoredDirs++
 			} else {
@@ -68,7 +93,7 @@ func walk(path string, depth int, cfg Config, ignores []string) (*model.Node, er
 		}
 
 		// Hidden files support
-		if !cfg.ShowHidden && name[0] == '.' {
+		if !ctx.cfg.ShowHidden && name[0] == '.' {
 			if e.IsDir() {
 				hiddenDirs++
 			} else {
@@ -77,43 +102,27 @@ func walk(path string, depth int, cfg Config, ignores []string) (*model.Node, er
 			continue
 		}
 
-		if cfg.DirectoriesOnly && !e.IsDir() {
+		if ctx.cfg.DirectoriesOnly && !e.IsDir() {
+			continue
+		}
+
+		includeMatch, ignoreMatch := pathMatches(ctx.rootAbs, childPath, ctx.cfg.IncludePatterns, ctx.cfg.IgnorePatterns)
+		if includeMatch {
+			visibleEntries = append(visibleEntries, e)
+			continue
+		}
+		if ignoreMatch {
+			continue
+		}
+		if len(ctx.cfg.IncludePatterns) > 0 && !e.IsDir() {
 			continue
 		}
 
 		visibleEntries = append(visibleEntries, e)
 	}
 
-	// Sort visible entries
-	if cfg.OrderByExtension {
-		sort.Slice(visibleEntries, func(i, j int) bool {
-			ei, ej := visibleEntries[i], visibleEntries[j]
-			if ei.IsDir() != ej.IsDir() {
-				return ei.IsDir() // directories first
-			}
-			if !ei.IsDir() {
-				extI := getExtension(ei.Name())
-				extJ := getExtension(ej.Name())
-				if extI != extJ {
-					if extI == "" {
-						return false
-					}
-					if extJ == "" {
-						return true
-					}
-					return extI < extJ
-				}
-			}
-			return ei.Name() < ej.Name()
-		})
-	} else if cfg.Sorted {
-		sort.Slice(visibleEntries, func(i, j int) bool {
-			return visibleEntries[i].Name() < visibleEntries[j].Name()
-		})
-	}
-
 	// Summary mode: scale-aware pruning & noise suppression
-	if cfg.SummaryMode {
+	if ctx.cfg.SummaryMode {
 		if depth > 0 && (isNoise(node.Name) || len(visibleEntries) > 50) {
 			node.Children = append(node.Children, &model.Node{
 				IsSummary:  true,
@@ -125,12 +134,19 @@ func walk(path string, depth int, cfg Config, ignores []string) (*model.Node, er
 
 	for _, e := range visibleEntries {
 		childPath := filepath.Join(path, e.Name())
-		child, err := walk(childPath, depth+1, cfg, ignores)
+		child, err := walk(childPath, depth+1, ctx)
 		if err != nil {
 			return nil, err
 		}
+		includeMatch, _ := pathMatches(ctx.rootAbs, childPath, ctx.cfg.IncludePatterns, ctx.cfg.IgnorePatterns)
+		if len(ctx.cfg.IncludePatterns) > 0 && child.IsDir && !includeMatch && len(child.Children) == 0 {
+			continue
+		}
 		node.Children = append(node.Children, child)
+		node.SizeBytes += child.SizeBytes
 	}
+
+	sortChildren(node.Children, ctx.cfg.SortBy, ctx.cfg.Reverse)
 
 	// Add aggregate summaries for unlisted items
 	if ignoredFiles > 0 || ignoredDirs > 0 {
@@ -220,5 +236,91 @@ func getExtension(name string) string {
 	if i == -1 {
 		return ""
 	}
-	return name[i+1:]
+	return strings.ToLower(name[i+1:])
+}
+
+func pathMatches(rootAbs, fullPath string, includes, ignores []string) (bool, bool) {
+	absPath, err := filepath.Abs(fullPath)
+	if err != nil {
+		return false, false
+	}
+	rel, err := filepath.Rel(rootAbs, absPath)
+	if err != nil {
+		return false, false
+	}
+	rel = filepath.ToSlash(rel)
+	base := filepath.Base(rel)
+
+	matchedInclude := matchAny(includes, rel, base)
+	matchedIgnore := matchAny(ignores, rel, base)
+	return matchedInclude, matchedIgnore && !matchedInclude
+}
+
+func matchAny(patterns []string, rel, base string) bool {
+	for _, pattern := range patterns {
+		p := strings.TrimSpace(filepath.ToSlash(pattern))
+		if p == "" {
+			continue
+		}
+		if ok, _ := filepath.Match(p, rel); ok {
+			return true
+		}
+		if ok, _ := filepath.Match(p, base); ok {
+			return true
+		}
+	}
+	return false
+}
+
+func sortChildren(children []*model.Node, sortBy string, reverse bool) {
+	if len(children) < 2 {
+		return
+	}
+	normalized := strings.ToLower(strings.TrimSpace(sortBy))
+	sort.SliceStable(children, func(i, j int) bool {
+		a, b := children[i], children[j]
+		if a.IsSummary != b.IsSummary {
+			return !a.IsSummary
+		}
+		if a.IsSummary && b.IsSummary {
+			return a.SummaryMsg < b.SummaryMsg
+		}
+		if a.IsDir != b.IsDir {
+			return a.IsDir
+		}
+
+		var cmpVal int
+		switch normalized {
+		case "ext":
+			cmpVal = compareExtensions(a.Name, b.Name)
+		case "size":
+			cmpVal = cmp.Compare(a.SizeBytes, b.SizeBytes)
+		case "mtime":
+			cmpVal = cmp.Compare(a.ModifiedUnix, b.ModifiedUnix)
+		default:
+			cmpVal = cmp.Compare(strings.ToLower(a.Name), strings.ToLower(b.Name))
+		}
+		if cmpVal == 0 {
+			cmpVal = cmp.Compare(strings.ToLower(a.Name), strings.ToLower(b.Name))
+		}
+		if reverse {
+			return cmpVal > 0
+		}
+		return cmpVal < 0
+	})
+}
+
+func compareExtensions(a, b string) int {
+	extA := getExtension(a)
+	extB := getExtension(b)
+	if extA == extB {
+		return 0
+	}
+	if extA == "" {
+		return 1
+	}
+	if extB == "" {
+		return -1
+	}
+	return cmp.Compare(extA, extB)
 }

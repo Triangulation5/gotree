@@ -65,7 +65,7 @@ var iconMap = map[string]Style{
 	"sql":  {Nerd: "\ue706", Unicode: "DB", ASCII: "sq", Color: "#FF8400"},
 
 	// Special Files
-	"gitignore": {Nerd: "\ue702", Unicode: "GIT", ASCII: "gi", Color: "#e67e22"},
+	"gitignore":  {Nerd: "\ue702", Unicode: "GIT", ASCII: "gi", Color: "#e67e22"},
 	"dockerfile": {Nerd: "\uf308", Unicode: "🐳", ASCII: "dk", Color: "#099cec"},
 	"license":    {Nerd: "\uf02d", Unicode: "📜", ASCII: "lc", Color: "#d35400"},
 }
@@ -120,7 +120,10 @@ func ResolveIcon(name string, isDir bool, mode Mode) (string, string) {
 	return glyph, style.Color
 }
 
-func Colorize(color string, text string) string {
+func Colorize(color string, text string, enabled bool) string {
+	if !enabled {
+		return text
+	}
 	if color == "NONE" || color == "" {
 		return text
 	}

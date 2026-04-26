@@ -1,106 +1,133 @@
-# gotree (gtr)
+﻿# gotree (gtr)
 
-<!--toc:start-->
-- [gotree (gtr)](#gotree-gtr)
-  - [Features](#features)
-  - [Installtion](#installtion)
-  - [Flags](#flags)
-  - [Examples](#examples)
-<!--toc:end-->
+`gotree` is a Go implementation of the Unix `tree` command with filtering, sorting, summaries, icon modes, and structured output.
 
-A simple Go implementation of the Unix `tree` command.
-It recursively prints a directory structure in a readable ASCII format.
+## Release
 
----
+Current release: **v2.0.0** (`gotree-v2.0.0`).
 
 ## Features
 
 - Recursive directory traversal
-- Deterministic sorted output
-- Optional hidden file support
-- Depth limiting
-- Clean separation of scanner and printer logic
-- **Icon sets**: Support for Nerd Font, Unicode, and ASCII icons, with runtime switching via `--icons` or `-i` flags.
-- **Summary mode**: Collapses deep structures, aggregates ignored/hidden files, suppresses noise, and respects `.gitignore`.
-- **Sort by extension**: Files can be sorted by their extension, with directories always appearing first, followed by extension groups, and then files without extensions.
+- Hidden file support (`-a`, `--all`)
+- Depth limiting (`-L`)
+- Directory-only mode (`-d`, `--directories`)
+- Include/ignore glob filtering (`--include`, `--ignore`), where include matches override ignore matches
+- Sorting (`--sort name|ext|size|mtime`, `--reverse`)
+- Backward-compatible aliases (`-s`, `--sorted`, `-o`, `--order-by-extension`)
+- Recursive size rollups (`--du`)
+- Icon sets (`--icons`, `-i`) and color theme control (`--theme auto|color|mono`)
+- Summary mode (`-m`, `--summary`)
+- Structured output (`--json`, `--yaml`)
+- Shell completion generation (`--completion bash|zsh|fish|powershell`)
 
----
+## Run and Build
 
-## Installtion
-
-Run from the project root:
-
-```bash
-# Installation process
-git clone https://github.com/Triangulation5/gotree.git gotree
-cd gotree
-
-# Running the application
-go run .\src\cmd	ree\main.go
-```
-
-Building a reusable executable:
+From project root:
 
 ```bash
-go build -o gtr.exe .\src\cmd	ree\main.go
+go run ./src/cmd/gotree
 ```
 
-Link this executable to a command in your .bashrc or Microsoft.Powershell_profile.ps1
+Build executable:
+
+```bash
+go build -o gotree ./src/cmd/gotree
+```
 
 ## Flags
 
-| Flag                         | Description                                      |
-|------------------------------|--------------------------------------------------|
-| `-a`                         | Show hidden files (dotfiles)                     |
-| `-L`                         | Maximum depth (0 = unlimited)                    |
-| `-o`, `--order-by-extension` | Sort files by extension                          |
-| `-m`, `--summary`            | Summary mode (collapses large/noise directories) |
-| `--icons <mode>`             | Icon mode: nerd (default), unicode, ascii, none  |
-| `-i <mode>`                  | Alias for --icons mode                           |
-
----
+| Flag | Description |
+|---|---|
+| `-a`, `--all` | Show hidden files |
+| `-L` | Maximum depth (0 = unlimited) |
+| `-d`, `--directories` | Show directories only |
+| `--include <glob>` | Include glob pattern (repeatable; comma-separated supported) |
+| `--ignore <glob>` | Ignore glob pattern (repeatable; comma-separated supported) |
+| `--sort <name\|ext\|size\|mtime>` | Sort mode |
+| `--reverse` | Reverse sort order |
+| `-s`, `--sorted` | Alias for `--sort name` |
+| `-o`, `--order-by-extension` | Alias for `--sort ext` |
+| `--du` | Show recursive size totals in tree and summary |
+| `--theme <auto\|color\|mono>` | Color behavior (`auto` respects `NO_COLOR`) |
+| `-i`, `--icons <mode>` | Icon mode: `nerd`, `unicode`, `ascii`, `none` |
+| `-m`, `--summary` | Summary mode |
+| `--json` | Output JSON payload |
+| `--yaml` | Output YAML payload |
+| `--completion <shell>` | Print completion script |
+| `-v`, `--version` | Show version |
 
 ## Examples
 
-Show hidden files:
-
 ```bash
-go run .\src\cmd	ree\main.go -a .
-```
-
-Limit depth to 2:
-
-```bash
-go run .\src\cmd	ree\main.go -L 2 .
-```
-
-Sort by extension:
-
-```bash
-gotree -o .
-```
-
-Summary mode:
-
-```bash
-gotree -m .
-```
-
-Nerd icons (default):
-
-```bash
+# Default tree
 gotree .
+
+# Include only Go files
+gotree --include "*.go" .
+
+# Ignore build output
+gotree --ignore "dist/*" .
+
+# Sort by size descending
+gotree --sort size --reverse .
+
+# Structured output
+gotree --json .
+gotree --yaml .
+
+# No ANSI colors
+gotree --theme mono .
 ```
 
-Unicode icons:
+## Testing
+
+### Go tests
 
 ```bash
-gotree --icons=unicode .
-gotree -i unicode .
+go test ./src/...
+go vet ./src/...
 ```
 
-No icons:
+### Python CLI integration tests
+
+Install dependencies:
 
 ```bash
-gotree --icons=none .
-gotree -i none .
+python -m pip install -r ./tests/python/requirements.txt
+```
+
+Run tests:
+
+```bash
+python -m pytest ./tests/python
+```
+
+If your workspace is in OneDrive and pytest temp cleanup fails on Windows, run:
+
+```bash
+python -m pytest ./tests/python --basetemp C:/Users/<you>/.codex/memories/pytest-tmp
+```
+
+The Python suite runs the CLI as a black box (`go run ./src/cmd/gotree ...`) and validates behavior like structured output, filtering precedence, and completion output.
+
+## Packaging
+
+Build release artifacts into `dist/`:
+
+```bash
+# Unix-like shells
+bash ./scripts/release.sh
+
+# PowerShell
+./scripts/release.ps1
+```
+
+## Production Readiness
+
+For this release, readiness means all of the following pass:
+
+- `go build ./src/cmd/gotree`
+- `go test ./src/...`
+- `go vet ./src/...`
+- CLI smoke checks for text output, JSON/YAML output, completion generation, and filter/sort behavior

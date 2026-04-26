@@ -2,16 +2,21 @@
 package model
 
 type Node struct {
-    Name       string
-    Path       string
-    IsDir      bool
-    Children   []*Node
-    IsSummary  bool
-    SummaryMsg string
+	Name         string
+	Path         string
+	IsDir        bool
+	SizeBytes    int64
+	ModifiedUnix int64
+	Children     []*Node
+	IsSummary    bool
+	SummaryMsg   string
 }
 
 func (n *Node) Count() (dirs, files int) {
 	for _, child := range n.Children {
+		if child.IsSummary {
+			continue
+		}
 		if child.IsDir {
 			dirs++
 		} else {
