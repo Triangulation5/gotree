@@ -1,5 +1,19 @@
 ﻿# gotree (gtr)
 
+<!--toc:start-->
+- [gotree (gtr)](#gotree-gtr)
+  - [Release](#release)
+  - [Features](#features)
+  - [Run and Build](#run-and-build)
+  - [Flags](#flags)
+  - [Examples](#examples)
+  - [Testing](#testing)
+    - [Go tests](#go-tests)
+    - [Python CLI integration tests](#python-cli-integration-tests)
+  - [Packaging](#packaging)
+  - [Production Readiness](#production-readiness)
+<!--toc:end-->
+
 `gotree` is a Go implementation of the Unix `tree` command with filtering, sorting, summaries, icon modes, and structured output.
 
 ## Release

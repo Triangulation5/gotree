@@ -61,7 +61,6 @@ def test_include_overrides_ignore(tmp_path):
     assert "b.txt" not in names
     assert "z.md" not in names
 
-
 def test_theme_mono_disables_color_sequences(tmp_path):
     root = make_fixture(tmp_path)
     proc = run_cmd(["--theme", "mono", "--icons", "none", str(root)])
