@@ -1,3 +1,4 @@
+// Package icon renders all the icons for this project
 package icon
 
 import (

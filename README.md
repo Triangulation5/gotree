@@ -51,25 +51,25 @@ go build -o gotree ./src/cmd/gotree
 
 ## Flags
 
-| Flag | Description |
-|---|---|
-| `-a`, `--all` | Show hidden files |
-| `-L` | Maximum depth (0 = unlimited) |
-| `-d`, `--directories` | Show directories only |
-| `--include <glob>` | Include glob pattern (repeatable; comma-separated supported) |
-| `--ignore <glob>` | Ignore glob pattern (repeatable; comma-separated supported) |
-| `--sort <name\|ext\|size\|mtime>` | Sort mode |
-| `--reverse` | Reverse sort order |
-| `-s`, `--sorted` | Alias for `--sort name` |
-| `-o`, `--order-by-extension` | Alias for `--sort ext` |
-| `--du` | Show recursive size totals in tree and summary |
-| `--theme <auto\|color\|mono>` | Color behavior (`auto` respects `NO_COLOR`) |
-| `-i`, `--icons <mode>` | Icon mode: `nerd`, `unicode`, `ascii`, `none` |
-| `-m`, `--summary` | Summary mode |
-| `--json` | Output JSON payload |
-| `--yaml` | Output YAML payload |
-| `--completion <shell>` | Print completion script |
-| `-v`, `--version` | Show version |
+| Flag                              | Description                                                  |
+|-----------------------------------|--------------------------------------------------------------|
+| `-a`, `--all`                     | Show hidden files                                            |
+| `-L`                              | Maximum depth (0 = unlimited)                                |
+| `-d`, `--directories`             | Show directories only                                        |
+| `--include <glob>`                | Include glob pattern (repeatable; comma-separated supported) |
+| `--ignore <glob>`                 | Ignore glob pattern (repeatable; comma-separated supported)  |
+| `--sort <name\|ext\|size\|mtime>` | Sort mode                                                    |
+| `--reverse`                       | Reverse sort order                                           |
+| `-s`, `--sorted`                  | Alias for `--sort name`                                      |
+| `-o`, `--order-by-extension`      | Alias for `--sort ext`                                       |
+| `--du`                            | Show recursive size totals in tree and summary               |
+| `--theme <auto\|color\|mono>`     | Color behavior (`auto` respects `NO_COLOR`)                  |
+| `-i`, `--icons <mode>`            | Icon mode: `nerd`, `unicode`, `ascii`, `none`                |
+| `-m`, `--summary`                 | Summary mode                                                 |
+| `--json`                          | Output JSON payload                                          |
+| `--yaml`                          | Output YAML payload                                          |
+| `--completion <shell>`            | Print completion script                                      |
+| `-v`, `--version`                 | Show version                                                 |
 
 ## Examples
 
